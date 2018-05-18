@@ -17,7 +17,7 @@ We all want to write well-tested code, but in large projects that can mean runni
 Installing
 ==========
 
-Install with `pip`_::
+Install with `pip`_ (package on `PyPI`_; source at `GitHub`_)::
 
   $ pip install pytest-fastest
 
@@ -27,6 +27,40 @@ Usage
 Most large projects usually work off a common Git branch such as ``dev`` or ``master``. When a developer wants to add a feature or bugfix, they create a new branch to do their work. After making some changes, they run tests to make sure everything still works, fix a few things, run more tests, fix things, and so on until they're happy with it. However, that "run tests" part can slow things down, as either lots of irrelevant of tests add time and screen clutter,or the developer manually figures out what really needs to be checked.
 
 pytest-fastest automates that processes. It takes a parameter naming a Git commit, ``fastest-commit``, and compares the current state of the developer's work to that commit. It then builds a coverage map tracking which of the project's files have been accessed by each test function. In future runs with the appropriate ``fastest-mode`` set, it compares that coverage map to the ``git diff`` from fastest-commit to see which tests actually need to be executed - the rest are skipped.
+
+Example
+=======
+
+First, we clone a large Git repo, create a new branch, and run the full unit test suite to gather coverage data::
+
+  $ git clone myrepo
+  $ git checkout dev
+  $ git checkout -b feature/newstuff
+  $ pytest tests/unit --fastest-mode=skip --fastest-commit=dev
+  ...
+  ============================ 569 passed in 19.76 seconds ============================
+
+Now let's run the tests again::
+
+  $ pytest tests/unit --fastest-mode=skip --fastest-commit=dev
+  ...
+  ============================ 569 skipped in 2.83 seconds ============================
+
+Whoa! Magic! Now we modify a module in the package and run the tests::
+
+  $ vi src/somefile.py
+  $ pytest tests/unit --fastest-mode=skip --fastest-commit=dev
+  ...
+  ======================= 6 passed, 563 skipped in 3.03 seconds =======================
+
+Only tests that refer to ``somefile.py`` were run, but everything else was skipped. Now let's add a new test::
+
+  $ vi tests/unit/test_module.py
+  $ pytest tests/unit --fastest-mode=skip --fastest-commit=dev
+  ...
+  ======================= 7 passed, 563 skipped in 2.98 seconds =======================
+
+Our testing time has dropped from nearly twenty seconds to less than three, and we didn't have to do any work to figure out which tests needed to be run.
 
 Modes
 =====
@@ -55,5 +89,12 @@ Only call graphs are examined. If ``module_a`` imports only a constant from ``mo
 
 Code changes are tracked at the module level, not the function level. If you modify ``module_a``, then any tests that access *any* functions in ``module_a`` will run. The main complication is that it's fairly difficult to accurately parse ``git diff``'s output to see exactly what's changed. Future versions may address this.
 
+Notes
+=====
+
+pytest-fastest stores its cached coverage data in a file named ``.fastest.coverage`` in the pytest rootdir.
+
 .. _`pip`: https://pypi.org/project/pip/
 .. _`pytest.ini`: https://docs.pytest.org/en/latest/customize.html
+.. _`PyPI`: https://pypi.org/project/pytest-fastest/
+.. _`GitHub`: https://github.com/kstrauser/pytest-fastest
