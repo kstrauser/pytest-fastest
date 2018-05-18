@@ -16,6 +16,7 @@ from _pytest.runner import runtestprotocol
 
 STOREFILE = '.fastest.coverage'
 COVERAGE = {}  # type: Dict[str, List[str]]
+STOREVERSION = 1
 
 
 # Configuration
@@ -107,7 +108,7 @@ def git_changes(commit: str) -> Tuple[Set[str], Set[Tuple[str, str]]]:
 
 
 @contextlib.contextmanager
-def tracer(rootdir: str):
+def tracer(rootdir: str, own_file: str):
     """Collect call graphs for modules within the rootdir."""
 
     result = set()
@@ -120,7 +121,8 @@ def tracer(rootdir: str):
             return
 
         func_filename = frame.f_code.co_filename
-
+        if func_filename == own_file:
+            return
         if not func_filename.endswith('.py'):
             return
         if not func_filename.startswith(base_path):
@@ -140,16 +142,27 @@ def load_coverage():
 
     try:
         with open(STOREFILE, 'r') as infile:
-            return json.load(infile)
+            data = json.load(infile)
     except FileNotFoundError:
         return {}
+
+    try:
+        if data['version'] != STOREVERSION:
+            return {}
+    except KeyError:
+        return {}
+
+    return data['coverage']
 
 
 def save_coverage(coverage):
     """Save the coverage data to disk."""
 
     with open(STOREFILE, 'w') as outfile:
-        json.dump(coverage, outfile, indent=2)
+        json.dump({
+            'coverage': coverage,
+            'version': STOREVERSION,
+        }, outfile, indent=2)
 
 
 # Hooks
@@ -188,14 +201,12 @@ def pytest_collection_modifyitems(config, items):
     if not config.cache.fastest_skip:
         return
 
-    covered_files = set()
-    for file_list in COVERAGE.values():
-        covered_files.update(set(file_list))
+    covered_test_files = {cov['fspath'] for cov in COVERAGE.values()}
     changed_files, changed_tests = git_changes(config.cache.fastest_commit)
 
     affected_nodes = set()
     for nodeid, files in COVERAGE.items():
-        for fname in files:
+        for fname in files['files']:
             if fname in changed_files:
                 affected_nodes.add(nodeid)
 
@@ -206,7 +217,7 @@ def pytest_collection_modifyitems(config, items):
                 # Tests refer to modules that have changed
                 item.nodeid in affected_nodes,
                 # Tests that we don't already have coverage data for
-                str(item.fspath) not in covered_files,
+                str(item.fspath) not in covered_test_files,
                 # Tests that have themselves been changed
                 (str(item.fspath), item.name) in changed_tests,
         )):
@@ -221,7 +232,7 @@ def pytest_runtest_protocol(item, nextitem):
     if not item.config.cache.fastest_gather:
         return
 
-    with tracer(item.config.rootdir) as coverage:
+    with tracer(item.config.rootdir, str(item.fspath)) as coverage:
         reports = runtestprotocol(item, nextitem=nextitem)
 
     item.ihook.pytest_runtest_logfinish(
@@ -233,7 +244,10 @@ def pytest_runtest_protocol(item, nextitem):
         return True
 
     if outcomes['call'] == 'passed':
-        COVERAGE[item.nodeid] = sorted(coverage)
+        COVERAGE[item.nodeid] = {
+            'files': sorted(coverage),
+            'fspath': str(item.fspath),
+        }
     else:
         try:
             del COVERAGE[item.nodeid]
