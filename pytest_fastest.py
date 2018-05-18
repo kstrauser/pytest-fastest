@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+"""Use coverage data and Git to determine which tests may be skipped."""
+
 import contextlib
 import enum
 import json
@@ -8,12 +10,16 @@ import subprocess
 import sys
 
 import pytest
+from _pytest.config import ArgumentError
 from _pytest.runner import runtestprotocol
 
-STOREFILE = '/tmp/amino_user.test.coverage'
+STOREFILE = '.fastest.coverage'
 COVERAGE = {}
 
+
 class Mode(enum.Enum):
+    """Enumerated running modes."""
+
     # Run all tests without collecting coverage data: normal pytest behavior
     ALL = 'all'
     # Skip tests that don't need to be run, but update coverage data on the ones that do
@@ -25,6 +31,8 @@ class Mode(enum.Enum):
 
 
 def pytest_addoption(parser):
+    """Add command line options."""
+
     group = parser.getgroup('fastest')
     group.addoption(
         '--fastest-mode',
@@ -32,16 +40,33 @@ def pytest_addoption(parser):
         choices=[mode.value for mode in Mode],
         action='store',
         dest='fastest_mode',
-        help='Set the value for the fixture "bar".'
-
+        help=(
+            'Set the running mode.'
+            ' `all` runs all tests but does not collect coverage data.'
+            ' `skip` skips tests that can be skipped, and updates coverage data on the rest.'
+            ' `gather` runs all tests and gathers coverage data on them.'
+            ' `cache` skips tests and does not collect coverage data.'
+        )
     )
+    group.addoption(
+        '--fastest-commit',
+        action='store',
+        dest='fastest_commit',
+        help='Git commit to compare current work against.'
+    )
+
+    parser.addini('fastest_commit', 'Git commit to compare current work against')
 
 
 def git_toplevel():
+    """Get the toplevel git directory."""
+
     return subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).decode('UTF-8').strip()
 
 
-def git_changes(commit='dev'):
+def git_changes(commit):
+    """Get the set of changes between the given commit."""
+
     root_dir = pathlib.Path(git_toplevel())
     diff = subprocess.check_output(['git', 'diff', commit]).decode('UTF-8')
 
@@ -75,6 +100,11 @@ def git_changes(commit='dev'):
 
 
 def pytest_configure(config):
+    """Process the configuration."""
+
+    config.cache.fastest_commit = (
+        config.getoption('fastest_commit') or config.getini('fastest_commit')
+    )
     config.cache.fastest_mode = config.getoption('fastest_mode')
 
     config.cache.fastest_skip, config.cache.fastest_gather = {
@@ -84,19 +114,26 @@ def pytest_configure(config):
         Mode.CACHE.value: (True, False),
     }[config.cache.fastest_mode]
 
+    if config.cache.fastest_skip and not config.cache.fastest_commit:
+        raise ArgumentError(
+            'fastest_mode', f'Mode {config.cache.fastest_mode} requires fastest_commit to be set.'
+        )
+
     COVERAGE.clear()
     if config.cache.config.cache.fastest_gather or config.cache.fastest_skip:
         COVERAGE.update(load_coverage())
 
 
 def pytest_collection_modifyitems(config, items):
+    """Mark unaffected tests as skippable."""
+
     if not config.cache.fastest_skip:
         return
 
     covered_files = set()
     for file_list in COVERAGE.values():
         covered_files.update(set(file_list))
-    changed_files, changed_tests = git_changes()
+    changed_files, changed_tests = git_changes(config.cache.fastest_commit)
 
     affected_nodes = set()
     for nodeid, files in COVERAGE.items():
@@ -120,6 +157,8 @@ def pytest_collection_modifyitems(config, items):
     return True
 
 def pytest_runtest_protocol(item, nextitem):
+    """Gather coverage data for the item."""
+
     if not item.config.cache.fastest_gather:
         return
 
@@ -147,12 +186,17 @@ def pytest_runtest_protocol(item, nextitem):
 
 @contextlib.contextmanager
 def tracer(rootdir):
+    """Collect call graphs for modules within the rootdir."""
+
     result = set()
     base_path = str(pathlib.Path(rootdir))
 
     def trace_calls(frame, event, arg):
+        """settrace calls this every time something interesting happens."""
+
         if event != 'call':
             return
+
         co = frame.f_code
         func_filename = co.co_filename
 
@@ -171,19 +215,24 @@ def tracer(rootdir):
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus):
-    """Report all the things."""
+    """Save the coverage data we've collected."""
 
     if COVERAGE:
         save_coverage(COVERAGE)
 
 
 def load_coverage():
+    """Load the coverage data from disk."""
+
     try:
         with open(STOREFILE, 'r') as infile:
             return json.load(infile)
     except FileNotFoundError:
         return {}
 
+
 def save_coverage(coverage):
+    """Save the coverage data to disk."""
+
     with open(STOREFILE, 'w') as outfile:
         json.dump(coverage, outfile, indent=2)
