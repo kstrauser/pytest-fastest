@@ -5,10 +5,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from contextlib import contextmanager
-from functools import singledispatch
 from pathlib import Path
-from types import ModuleType
-from typing import Callable
 
 import pytest
 from _pytest.runner import runtestprotocol
@@ -30,6 +27,7 @@ def pytest_addoption(parser):
     )
 
     parser.addini('HELLO', 'Dummy pytest.ini setting')
+
 
 def git_toplevel():
     return subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).decode('UTF-8').strip()
@@ -87,38 +85,24 @@ def pytest_collection_modifyitems(config, items):
 
     affected_nodes = set()
     for nodeid, files in COVERAGE.items():
-        for fname in files: 
+        for fname in files:
             if fname in changed_files:
                 affected_nodes.add(nodeid)
 
-    keep_items = set()
-    reasons = defaultdict(int)
+    skip = pytest.mark.skip(reason='skipper')
+
     for item in items:
-        if item.nodeid in affected_nodes:
-            reasons['call functions in a changed file'] += 1
-            keep_items.add(item)
-        if str(item.fspath) not in covered_files:
-            reasons["didn't already have coverage"] += 1
-            keep_items.add(item)
-        if (str(item.fspath), item.name) in changed_tests:
-            reasons['were changed'] += 1
-            keep_items.add(item)
+        if not any((
+            # Tests refer to modules that have changed
+            item.nodeid in affected_nodes,
+            # Tests that we don't already have coverage data for
+            str(item.fspath) not in covered_files,
+            # Tests that have themselves been changed
+            (str(item.fspath), item.name) in changed_tests,
+        )):
+            item.add_marker(skip)
 
-    index = 0
-    while index < len(items):
-        item = items[index]
-        if item in keep_items:
-            index += 1
-        else:
-            del items[index]
-
-    if reasons:
-        print()
-        for reason, count in reasons.items():
-            print(f'Kept {count} tests because they {reason}')
-        print(f'Remaining test count: {len(items)}')
-
-    return
+    return True
 
 def pytest_runtest_protocol(item, nextitem):
     if not item.config.cache.fastest_skip:
@@ -127,8 +111,15 @@ def pytest_runtest_protocol(item, nextitem):
     with tracer(item.config.rootdir) as coverage:
         reports = runtestprotocol(item, nextitem=nextitem)
 
-    result = next(report.outcome for report in reports if report.when == 'call')
-    if result == 'passed':
+    item.ihook.pytest_runtest_logfinish(
+        nodeid=item.nodeid, location=item.location,
+    )
+
+    outcomes = {report.when: report.outcome for report in reports}
+    if outcomes['setup'] == 'skipped':
+        return True
+
+    if outcomes['call'] == 'passed':
         COVERAGE[item.nodeid] = sorted(coverage)
     else:
         try:
@@ -153,7 +144,7 @@ def tracer(rootdir):
             return
         co = frame.f_code
         func_filename = co.co_filename
-        
+
         if not func_filename.endswith('.py'):
             return
         if not func_filename.startswith(base_path):
