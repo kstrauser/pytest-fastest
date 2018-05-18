@@ -20,17 +20,20 @@ COVERAGE = {}
 def pytest_addoption(parser):
     group = parser.getgroup('fastest')
     group.addoption(
-        '--fastest-package',
+        '--fastest-mode',
+        default='all',
+        choices=('all', 'skip'),
         action='store',
-        dest='fastest_package',
+        dest='fastest_mode',
         help='Set the value for the fixture "bar".'
+
     )
 
     parser.addini('HELLO', 'Dummy pytest.ini setting')
 
-
 def git_toplevel():
     return subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).decode('UTF-8').strip()
+
 
 def git_changes(commit='dev'):
     root_dir = Path(git_toplevel())
@@ -66,19 +69,20 @@ def git_changes(commit='dev'):
 
 
 def pytest_configure(config):
-    fastest_package = config.getoption('fastest_package')
-    if fastest_package:
-        config.cache.fastest_package = path_of_module(fastest_package)
-    else:
-        config.cache.fastest_package = None
+    fastest_mode = config.getoption('fastest_mode')
+    config.cache.fastest_skip = fastest_mode == 'skip'
+
 
 def pytest_collection_modifyitems(config, items):
-    if not config.cache.fastest_package:
+    if not config.cache.fastest_skip:
         return
 
     COVERAGE.clear()
     COVERAGE.update(load_coverage())
 
+    covered_files = set()
+    for file_list in COVERAGE.values():
+        covered_files.update(set(file_list))
     changed_files, changed_tests = git_changes()
 
     affected_nodes = set()
@@ -90,10 +94,14 @@ def pytest_collection_modifyitems(config, items):
     index = 0
     while index < len(items):
         item = items[index]
-        if (
-                item.nodeid in affected_nodes or
-                (str(item.fspath), item.name) in changed_tests
-        ):
+        if any((
+                # Tests that touch files which have changed
+                item.nodeid in affected_nodes,
+                # Tests that we don't already have coverage for
+                str(item.fspath) not in covered_files,
+                # Tests that have themselves been changed
+                (str(item.fspath), item.name) in changed_tests,
+        )):
             index += 1
         else:
             del items[index]
@@ -101,10 +109,10 @@ def pytest_collection_modifyitems(config, items):
     return
 
 def pytest_runtest_protocol(item, nextitem):
-    if not item.config.cache.fastest_package:
+    if not item.config.cache.fastest_skip:
         return
 
-    with tracer(item.config.cache.fastest_package) as coverage:
+    with tracer(item.config.rootdir) as coverage:
         reports = runtestprotocol(item, nextitem=nextitem)
 
     result = next(report.outcome for report in reports if report.when == 'call')
