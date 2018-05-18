@@ -8,14 +8,14 @@ import json
 import pathlib
 import subprocess
 import sys
-from typing import Dict, List
+from typing import Dict, List, Set, Tuple  # noqa: F401, pylint: disable=unused-import
 
 import pytest
 from _pytest.config import ArgumentError
 from _pytest.runner import runtestprotocol
 
 STOREFILE = '.fastest.coverage'
-COVERAGE: Dict[str, List[str]] = {}
+COVERAGE = {}  # type: Dict[str, List[str]]
 
 
 # Configuration
@@ -63,13 +63,13 @@ def pytest_addoption(parser):
 
 # Helpers
 
-def git_toplevel():
+def git_toplevel() -> str:
     """Get the toplevel git directory."""
 
     return subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).decode('UTF-8').strip()
 
 
-def git_changes(commit):
+def git_changes(commit: str) -> Tuple[Set[str], Set[Tuple[str, str]]]:
     """Get the set of changes between the given commit."""
 
     root_dir = pathlib.Path(git_toplevel())
@@ -77,7 +77,7 @@ def git_changes(commit):
 
     changed_files = set()
     changed_tests = set()
-    current_file = None
+    current_file = ''
 
     for line in diff.splitlines():
         try:
@@ -96,7 +96,9 @@ def git_changes(commit):
         if fname == '/dev/null':
             continue
         if not (fname.startswith('a/') or fname.startswith('b/')):
-            raise ValueError(f'Pretty sure {fname!r} should start with a/ or b/')
+            raise ValueError(
+                'Pretty sure {!r} should start with a/ or b/'.format(fname)
+            )
 
         current_file = str(root_dir / fname[2:])
         changed_files.add(current_file)
@@ -105,7 +107,7 @@ def git_changes(commit):
 
 
 @contextlib.contextmanager
-def tracer(rootdir):
+def tracer(rootdir: str):
     """Collect call graphs for modules within the rootdir."""
 
     result = set()
@@ -130,7 +132,7 @@ def tracer(rootdir):
     try:
         yield result
     finally:
-        sys.settrace(None)
+        sys.settrace(None)  # type: ignore
 
 
 def load_coverage():
@@ -169,7 +171,10 @@ def pytest_configure(config):
 
     if config.cache.fastest_skip and not config.cache.fastest_commit:
         raise ArgumentError(
-            'fastest_mode', f'Mode {config.cache.fastest_mode} requires fastest_commit to be set.'
+            'fastest_mode',
+            'Mode {} requires fastest_commit to be set.'.format(
+                config.cache.fastest_mode
+            )
         )
 
     COVERAGE.clear()

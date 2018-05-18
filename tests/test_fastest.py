@@ -1,63 +1,39 @@
 # -*- coding: utf-8 -*-
 
 
-def test_bar_fixture(testdir):
-    """Make sure that pytest accepts our fixture."""
-
-    # create a temporary pytest test module
-    testdir.makepyfile("""
-        def test_sth(bar):
-            assert bar == "europython2015"
-    """)
-
-    # run pytest with the following cmd args
-    result = testdir.runpytest(
-        '--foo=europython2015',
-        '-v'
-    )
-
-    # fnmatch_lines does an assertion internally
-    result.stdout.fnmatch_lines([
-        '*::test_sth PASSED*',
-    ])
-
-    # make sure that that we get a '0' exit code for the testsuite
-    assert result.ret == 0
-
-
 def test_help_message(testdir):
     result = testdir.runpytest(
         '--help',
     )
     # fnmatch_lines does an assertion internally
     result.stdout.fnmatch_lines([
-        'fastest:',
-        '*--foo=DEST_FOO*Set the value for the fixture "bar".',
+        '*--fastest-mode={all,skip,gather,cache}',
+        '*--fastest-commit=FASTEST_COMMIT',
     ])
 
 
-def test_hello_ini_setting(testdir):
+def test_fastest_commit_setting(testdir):
     testdir.makeini("""
         [pytest]
-        HELLO = world
+        fastest_commit = abc1234
     """)
 
     testdir.makepyfile("""
         import pytest
 
         @pytest.fixture
-        def hello(request):
-            return request.config.getini('HELLO')
+        def commit(request):
+            return request.config.getini('fastest_commit')
 
-        def test_hello_world(hello):
-            assert hello == 'world'
+        def test_commit(commit):
+            assert commit == 'abc1234'
     """)
 
     result = testdir.runpytest('-v')
 
     # fnmatch_lines does an assertion internally
     result.stdout.fnmatch_lines([
-        '*::test_hello_world PASSED*',
+        '*::test_commit PASSED*',
     ])
 
     # make sure that that we get a '0' exit code for the testsuite

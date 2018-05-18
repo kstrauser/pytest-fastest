@@ -13,7 +13,7 @@ def read(fname):
 
 setup(
     name='pytest-fastest',
-    version='0.0.1',
+    version='0.0.2',
     author='Kirk Strauser',
     author_email='kirk@strauser.com',
     maintainer='Kirk Strauser',
@@ -23,7 +23,7 @@ setup(
     description='Use SCM and coverage data to run only needed tests',
     long_description=read('README.rst'),
     py_modules=['pytest_fastest'],
-    python_requires='>3, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
+    python_requires='>3, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*',
     install_requires=['pytest>=3.4.0'],
     classifiers=[
         'Development Status :: 4 - Beta',

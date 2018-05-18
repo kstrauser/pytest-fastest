@@ -10,7 +10,7 @@ pytest-fastest
     :target: https://pypi.org/project/pytest-fastest
     :alt: Python versions
 
-.. image:: https://travis-ci.org/kstrauser/pytest-fastest.svg?branch=master
+.. image:: https://travis-ci.org/kstrauser/pytest-fastest.svg?branch=dev
     :target: https://travis-ci.org/kstrauser/pytest-fastest
     :alt: See Build Status on Travis CI
 
