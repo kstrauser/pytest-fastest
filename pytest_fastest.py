@@ -8,13 +8,14 @@ import json
 import pathlib
 import subprocess
 import sys
+from typing import Dict, List
 
 import pytest
 from _pytest.config import ArgumentError
 from _pytest.runner import runtestprotocol
 
 STOREFILE = '.fastest.coverage'
-COVERAGE = {}
+COVERAGE: Dict[str, List[str]] = {}
 
 
 # Configuration
@@ -110,14 +111,13 @@ def tracer(rootdir):
     result = set()
     base_path = str(pathlib.Path(rootdir))
 
-    def trace_calls(frame, event, arg):
+    def trace_calls(frame, event, arg):  # pylint: disable=unused-argument
         """settrace calls this every time something interesting happens."""
 
         if event != 'call':
             return
 
-        co = frame.f_code
-        func_filename = co.co_filename
+        func_filename = frame.f_code.co_filename
 
         if not func_filename.endswith('.py'):
             return
@@ -209,6 +209,7 @@ def pytest_collection_modifyitems(config, items):
 
     return True
 
+
 def pytest_runtest_protocol(item, nextitem):
     """Gather coverage data for the item."""
 
@@ -237,7 +238,7 @@ def pytest_runtest_protocol(item, nextitem):
     return True
 
 
-def pytest_terminal_summary(terminalreporter, exitstatus):
+def pytest_terminal_summary(terminalreporter, exitstatus):  # pylint: disable=unused-argument
     """Save the coverage data we've collected."""
 
     if COVERAGE:
