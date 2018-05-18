@@ -44,4 +44,9 @@ setup(
             'fastest = pytest_fastest',
         ],
     },
+    project_urls={
+        'Documentation': 'http://pytest-fastest.readthedocs.io/en/latest/',
+        'Source': 'https://github.com/kstrauser/pytest-fastest',
+        'Tracker': 'https://github.com/kstrauser/pytest-fastest/issues',
+    }
 )
