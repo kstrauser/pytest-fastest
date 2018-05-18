@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import contextlib
+import enum
 import json
+import pathlib
 import subprocess
 import sys
-from collections import defaultdict
-from contextlib import contextmanager
-from pathlib import Path
 
 import pytest
 from _pytest.runner import runtestprotocol
@@ -13,20 +13,28 @@ from _pytest.runner import runtestprotocol
 STOREFILE = '/tmp/amino_user.test.coverage'
 COVERAGE = {}
 
+class Mode(enum.Enum):
+    # Run all tests without collecting coverage data: normal pytest behavior
+    ALL = 'all'
+    # Skip tests that don't need to be run, but update coverage data on the ones that do
+    SKIP = 'skip'
+    # Don't skip tests, but gather coverage data
+    GATHER = 'gather'
+    # Skip tests, but don't gather coverage data
+    CACHE = 'cache'
+
 
 def pytest_addoption(parser):
     group = parser.getgroup('fastest')
     group.addoption(
         '--fastest-mode',
         default='all',
-        choices=('all', 'skip'),
+        choices=[mode.value for mode in Mode],
         action='store',
         dest='fastest_mode',
         help='Set the value for the fixture "bar".'
 
     )
-
-    parser.addini('HELLO', 'Dummy pytest.ini setting')
 
 
 def git_toplevel():
@@ -34,7 +42,7 @@ def git_toplevel():
 
 
 def git_changes(commit='dev'):
-    root_dir = Path(git_toplevel())
+    root_dir = pathlib.Path(git_toplevel())
     diff = subprocess.check_output(['git', 'diff', commit]).decode('UTF-8')
 
     changed_files = set()
@@ -67,16 +75,23 @@ def git_changes(commit='dev'):
 
 
 def pytest_configure(config):
-    fastest_mode = config.getoption('fastest_mode')
-    config.cache.fastest_skip = fastest_mode == 'skip'
+    config.cache.fastest_mode = config.getoption('fastest_mode')
+
+    config.cache.fastest_skip, config.cache.fastest_gather = {
+        Mode.ALL.value: (False, False),
+        Mode.SKIP.value: (True, True),
+        Mode.GATHER.value: (False, True),
+        Mode.CACHE.value: (True, False),
+    }[config.cache.fastest_mode]
+
+    COVERAGE.clear()
+    if config.cache.config.cache.fastest_gather or config.cache.fastest_skip:
+        COVERAGE.update(load_coverage())
 
 
 def pytest_collection_modifyitems(config, items):
     if not config.cache.fastest_skip:
         return
-
-    COVERAGE.clear()
-    COVERAGE.update(load_coverage())
 
     covered_files = set()
     for file_list in COVERAGE.values():
@@ -93,19 +108,19 @@ def pytest_collection_modifyitems(config, items):
 
     for item in items:
         if not any((
-            # Tests refer to modules that have changed
-            item.nodeid in affected_nodes,
-            # Tests that we don't already have coverage data for
-            str(item.fspath) not in covered_files,
-            # Tests that have themselves been changed
-            (str(item.fspath), item.name) in changed_tests,
+                # Tests refer to modules that have changed
+                item.nodeid in affected_nodes,
+                # Tests that we don't already have coverage data for
+                str(item.fspath) not in covered_files,
+                # Tests that have themselves been changed
+                (str(item.fspath), item.name) in changed_tests,
         )):
             item.add_marker(skip)
 
     return True
 
 def pytest_runtest_protocol(item, nextitem):
-    if not item.config.cache.fastest_skip:
+    if not item.config.cache.fastest_gather:
         return
 
     with tracer(item.config.rootdir) as coverage:
@@ -129,15 +144,11 @@ def pytest_runtest_protocol(item, nextitem):
 
     return True
 
-@pytest.fixture
-def bar(request):
-    return request.config.option.dest_foo
 
-
-@contextmanager
+@contextlib.contextmanager
 def tracer(rootdir):
     result = set()
-    base_path = str(Path(rootdir))
+    base_path = str(pathlib.Path(rootdir))
 
     def trace_calls(frame, event, arg):
         if event != 'call':
@@ -161,6 +172,7 @@ def tracer(rootdir):
 
 def pytest_terminal_summary(terminalreporter, exitstatus):
     """Report all the things."""
+
     if COVERAGE:
         save_coverage(COVERAGE)
 
