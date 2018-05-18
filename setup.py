@@ -13,7 +13,7 @@ def read(fname):
 
 setup(
     name='pytest-fastest',
-    version='0.0.3',
+    version='0.0.4',
     author='Kirk Strauser',
     author_email='kirk@strauser.com',
     maintainer='Kirk Strauser',

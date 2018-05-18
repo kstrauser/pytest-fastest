@@ -229,7 +229,7 @@ def pytest_runtest_protocol(item, nextitem):
     )
 
     outcomes = {report.when: report.outcome for report in reports}
-    if outcomes['setup'] == 'skipped':
+    if outcomes['setup'] in {'failed', 'skipped'}:
         return True
 
     if outcomes['call'] == 'passed':
