@@ -64,17 +64,24 @@ def pytest_addoption(parser):
 
 # Helpers
 
+
+def git_output(args: List[str]) -> str:
+    """Run a git command and return its output as a string."""
+
+    return subprocess.check_output(['git', *args]).decode('UTF-8')
+
+
 def git_toplevel() -> str:
     """Get the toplevel git directory."""
 
-    return subprocess.check_output(['git', 'rev-parse', '--show-toplevel']).decode('UTF-8').strip()
+    return git_output(['rev-parse', '--show-toplevel']).strip()
 
 
 def git_changes(commit: str) -> Tuple[Set[str], Set[Tuple[str, str]]]:
     """Get the set of changes between the given commit."""
 
     root_dir = pathlib.Path(git_toplevel())
-    diff = subprocess.check_output(['git', 'diff', commit]).decode('UTF-8')
+    diff = git_output(['diff', commit])
 
     changed_files = set()
     changed_tests = set()
@@ -201,14 +208,13 @@ def pytest_collection_modifyitems(config, items):
     if not config.cache.fastest_skip:
         return
 
-    covered_test_files = {cov['fspath'] for cov in COVERAGE.values()}
+    covered_test_files = {covdata['fspath'] for covdata in COVERAGE.values()}
     changed_files, changed_tests = git_changes(config.cache.fastest_commit)
 
     affected_nodes = set()
-    for nodeid, files in COVERAGE.items():
-        for fname in files['files']:
-            if fname in changed_files:
-                affected_nodes.add(nodeid)
+    for nodeid, covdata in COVERAGE.items():
+        if any(fname in changed_files for fname in covdata['files']):
+            affected_nodes.add(nodeid)
 
     skip = pytest.mark.skip(reason='skipper')
 

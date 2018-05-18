@@ -19,7 +19,8 @@ yapf = "*"
 pylint = "*"
 "flake8" = "*"
 mypy = "*"
-Sphinx = "*"
+sphinx = "*"
+pytest-mock = "*"
 
 
 [requires]
