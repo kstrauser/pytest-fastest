@@ -19,6 +19,7 @@ yapf = "*"
 pylint = "*"
 "flake8" = "*"
 mypy = "*"
+Sphinx = "*"
 
 
 [requires]
