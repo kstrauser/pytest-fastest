@@ -23,7 +23,7 @@ setup(
     description='Use SCM and coverage to run only needed tests',
     long_description=read('README.rst'),
     py_modules=['pytest_fastest'],
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
+    python_requires='>3, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
     install_requires=['pytest>=3.4.0'],
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -31,8 +31,6 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Testing',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
