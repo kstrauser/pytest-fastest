@@ -52,7 +52,7 @@ def git_changes(commit='dev'):
             test_name = line[test_index + 4:].partition('(')[0]
             changed_tests.add((current_file, test_name))
 
-        if not line.startswith('--- ') or line.startswith('+++ '):
+        if not (line.startswith('--- ') or line.startswith('+++ ')):
             continue
         if not line.endswith('.py'):
             continue
@@ -91,20 +91,32 @@ def pytest_collection_modifyitems(config, items):
             if fname in changed_files:
                 affected_nodes.add(nodeid)
 
+    keep_items = set()
+    reasons = defaultdict(int)
+    for item in items:
+        if item.nodeid in affected_nodes:
+            reasons['call functions in a changed file'] += 1
+            keep_items.add(item)
+        if str(item.fspath) not in covered_files:
+            reasons["didn't already have coverage"] += 1
+            keep_items.add(item)
+        if (str(item.fspath), item.name) in changed_tests:
+            reasons['were changed'] += 1
+            keep_items.add(item)
+
     index = 0
     while index < len(items):
         item = items[index]
-        if any((
-                # Tests that touch files which have changed
-                item.nodeid in affected_nodes,
-                # Tests that we don't already have coverage for
-                str(item.fspath) not in covered_files,
-                # Tests that have themselves been changed
-                (str(item.fspath), item.name) in changed_tests,
-        )):
+        if item in keep_items:
             index += 1
         else:
             del items[index]
+
+    if reasons:
+        print()
+        for reason, count in reasons.items():
+            print(f'Kept {count} tests because they {reason}')
+        print(f'Remaining test count: {len(items)}')
 
     return
 
@@ -130,29 +142,11 @@ def pytest_runtest_protocol(item, nextitem):
 def bar(request):
     return request.config.option.dest_foo
 
-@singledispatch
-def path_of(obj: str) -> Path:
-    return path_of_path(Path(obj))
-
-@path_of.register(Path)
-def path_of_path(obj: Path) -> Path:
-    if obj.is_dir():
-        return obj
-    return obj.parent
-
-@path_of.register(Callable)
-def path_of_func(obj: Callable) -> Path:
-    return path_of_module(obj.__module__)
-
-@path_of.register(ModuleType)
-def path_of_module(obj: ModuleType) -> Path:
-    return Path(sys.modules[obj].__file__).absolute().parent
-
 
 @contextmanager
-def tracer(startswith):
+def tracer(rootdir):
     result = set()
-    base_path = str(path_of(startswith))
+    base_path = str(Path(rootdir))
 
     def trace_calls(frame, event, arg):
         if event != 'call':
@@ -172,6 +166,7 @@ def tracer(startswith):
         yield result
     finally:
         sys.settrace(None)
+
 
 def pytest_terminal_summary(terminalreporter, exitstatus):
     """Report all the things."""
