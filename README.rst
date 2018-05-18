@@ -66,27 +66,24 @@ thoroughly test your work but skip all the things you *haven't* changed.
 To use it:
 
 * In ``pytest.ini``, set ``fastest_commit`` to the name of a Git commit to
-compare your current work against. (You can also set or override it on the
-comment line with ``--fastest-commit``). This is required if you want to
-skip tests, which is the main reason for using this plugin.
+  compare your current work against. (You can also set or override it on the
+  comment line with ``--fastest-commit``). This is required if you want to
+  skip tests, which is the main reason for using this plugin.
 
 * Use the command line argument ``--fastest-mode`` to choice the appropriate
-running mode:
+  running mode:
 
-    - ``all`` (default): Run all tests without collecting coverage data. This
-      emulates normal pytest behavior and has no effect on performance.
-
-    - ``skip``: Skip tests that don't need to be run, but update coverage data
-      on the ones that do run. This will usually be faster than ``all``, but
-      because collecting coverage information takes some time, as the number
-      of un-skippable tests grows very large it may actually become slower.
-
-    - ``gather``: Don't skip any tests, but do gather coverage data. This is
-      slower than ``all`` but can be used to seed the coverage cache.
-
-    - ``cache``: This is a fast mode for fixing existing tests. It skips tests
-      but doesn't update the coverage cache. It will never be slower than
-      ``all`` and will always be faster than ``skip``.
+  - ``all`` (default): Run all tests without collecting coverage data. This
+    emulates normal pytest behavior and has no effect on performance.
+  - ``skip``: Skip tests that don't need to be run, but update coverage data
+    on the ones that do run. This will usually be faster than ``all``, but
+    because collecting coverage information takes some time, as the number
+    of un-skippable tests grows very large it may actually become slower.
+  - ``gather``: Don't skip any tests, but do gather coverage data. This is
+    slower than ``all`` but can be used to seed the coverage cache.
+  - ``cache``: This is a fast mode for fixing existing tests. It skips tests
+    but doesn't update the coverage cache. It will never be slower than
+    ``all`` and will always be faster than ``skip``.
 
 Contributing
 ------------
