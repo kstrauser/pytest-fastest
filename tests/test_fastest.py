@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import os
+import pathlib
+import subprocess
+
 import pytest_fastest
 
 
@@ -43,9 +47,6 @@ def test_fastest_commit_setting(testdir):
 
 
 def test_git_toplevel(tmpdir):
-    import subprocess
-    import os
-
     git_dir = tmpdir.mkdir('git_toplevel')
     os.chdir(str(git_dir))
     subprocess.check_call(['git', 'init'])
@@ -54,7 +55,7 @@ def test_git_toplevel(tmpdir):
     os.makedirs(str(subdir))
     os.chdir(str(subdir))
 
-    assert pytest_fastest.git_toplevel() == str(git_dir)
+    assert pathlib.Path(pytest_fastest.git_toplevel()) == git_dir
 
 
 def test_git_changes_empty(mocker):
