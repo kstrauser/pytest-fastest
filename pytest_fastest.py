@@ -17,6 +17,8 @@ STOREFILE = '.fastest.coverage'
 COVERAGE = {}
 
 
+# Configuration
+
 class Mode(enum.Enum):
     """Enumerated running modes."""
 
@@ -58,6 +60,8 @@ def pytest_addoption(parser):
     parser.addini('fastest_commit', 'Git commit to compare current work against')
 
 
+# Helpers
+
 def git_toplevel():
     """Get the toplevel git directory."""
 
@@ -98,6 +102,55 @@ def git_changes(commit):
 
     return changed_files, changed_tests
 
+
+@contextlib.contextmanager
+def tracer(rootdir):
+    """Collect call graphs for modules within the rootdir."""
+
+    result = set()
+    base_path = str(pathlib.Path(rootdir))
+
+    def trace_calls(frame, event, arg):
+        """settrace calls this every time something interesting happens."""
+
+        if event != 'call':
+            return
+
+        co = frame.f_code
+        func_filename = co.co_filename
+
+        if not func_filename.endswith('.py'):
+            return
+        if not func_filename.startswith(base_path):
+            return
+
+        result.add(func_filename)
+
+    sys.settrace(trace_calls)
+    try:
+        yield result
+    finally:
+        sys.settrace(None)
+
+
+def load_coverage():
+    """Load the coverage data from disk."""
+
+    try:
+        with open(STOREFILE, 'r') as infile:
+            return json.load(infile)
+    except FileNotFoundError:
+        return {}
+
+
+def save_coverage(coverage):
+    """Save the coverage data to disk."""
+
+    with open(STOREFILE, 'w') as outfile:
+        json.dump(coverage, outfile, indent=2)
+
+
+# Hooks
 
 def pytest_configure(config):
     """Process the configuration."""
@@ -184,55 +237,8 @@ def pytest_runtest_protocol(item, nextitem):
     return True
 
 
-@contextlib.contextmanager
-def tracer(rootdir):
-    """Collect call graphs for modules within the rootdir."""
-
-    result = set()
-    base_path = str(pathlib.Path(rootdir))
-
-    def trace_calls(frame, event, arg):
-        """settrace calls this every time something interesting happens."""
-
-        if event != 'call':
-            return
-
-        co = frame.f_code
-        func_filename = co.co_filename
-
-        if not func_filename.endswith('.py'):
-            return
-        if not func_filename.startswith(base_path):
-            return
-
-        result.add(func_filename)
-
-    sys.settrace(trace_calls)
-    try:
-        yield result
-    finally:
-        sys.settrace(None)
-
-
 def pytest_terminal_summary(terminalreporter, exitstatus):
     """Save the coverage data we've collected."""
 
     if COVERAGE:
         save_coverage(COVERAGE)
-
-
-def load_coverage():
-    """Load the coverage data from disk."""
-
-    try:
-        with open(STOREFILE, 'r') as infile:
-            return json.load(infile)
-    except FileNotFoundError:
-        return {}
-
-
-def save_coverage(coverage):
-    """Save the coverage data to disk."""
-
-    with open(STOREFILE, 'w') as outfile:
-        json.dump(coverage, outfile, indent=2)
