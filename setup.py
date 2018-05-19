@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""Installer for pytest-fastest."""
+
 import os
 import codecs
 from setuptools import setup
 
 
 def read(fname):
+    """Return the named file's contents."""
     file_path = os.path.join(os.path.dirname(__file__), fname)
     return codecs.open(file_path, encoding='utf-8').read()
 

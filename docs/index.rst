@@ -89,6 +89,8 @@ Only call graphs are examined. If ``module_a`` imports only a constant from ``mo
 
 Code changes are tracked at the module level, not the function level. If you modify ``module_a``, then any tests that access *any* functions in ``module_a`` will run. The main complication is that it's fairly difficult to accurately parse ``git diff``'s output to see exactly what's changed. Future versions may address this.
 
+Git is the only SCM tool currently supported, although the design supports adding others.
+
 Notes
 =====
 

@@ -1,49 +1,11 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=missing-docstring
 
 import os
 import pathlib
 import subprocess
 
-import pytest_fastest
-
-
-def test_help_message(testdir):
-    result = testdir.runpytest(
-        '--help',
-    )
-    # fnmatch_lines does an assertion internally
-    result.stdout.fnmatch_lines([
-        '*--fastest-mode={all,skip,gather,cache}',
-        '*--fastest-commit=FASTEST_COMMIT',
-    ])
-
-
-def test_fastest_commit_setting(testdir):
-    testdir.makeini("""
-        [pytest]
-        fastest_commit = abc1234
-    """)
-
-    testdir.makepyfile("""
-        import pytest
-
-        @pytest.fixture
-        def commit(request):
-            return request.config.getini('fastest_commit')
-
-        def test_commit(commit):
-            assert commit == 'abc1234'
-    """)
-
-    result = testdir.runpytest('-v')
-
-    # fnmatch_lines does an assertion internally
-    result.stdout.fnmatch_lines([
-        '*::test_commit PASSED*',
-    ])
-
-    # make sure that that we get a '0' exit code for the testsuite
-    assert result.ret == 0
+from pytest_fastest import git
 
 
 def test_git_toplevel(tmpdir):
@@ -55,19 +17,19 @@ def test_git_toplevel(tmpdir):
     os.makedirs(str(subdir))
     os.chdir(str(subdir))
 
-    assert pathlib.Path(pytest_fastest.git_toplevel()) == git_dir
+    assert git.find_toplevel() == git_dir
 
 
 def test_git_changes_empty(mocker):
-    mocker.patch('pytest_fastest.git_output', return_value="""\
+    mocker.patch('pytest_fastest.git.cmd_output', return_value="""\
 """)
 
-    assert pytest_fastest.git_changes('foo') == (set(), set())
+    assert git.changes_since('foo') == (set(), set())
 
 
 def test_git_changes_example(mocker):
-    mocker.patch('pytest_fastest.git_toplevel', return_value='here')
-    mocker.patch('pytest_fastest.git_output', return_value='''\
+    mocker.patch('pytest_fastest.git.find_toplevel', return_value=pathlib.Path('here'))
+    mocker.patch('pytest_fastest.git.cmd_output', return_value='''
 diff --git a/pytest_fastest.py b/pytest_fastest.py
 index a9584f8..0eec9e2 100644
 --- a/pytest_fastest.py
@@ -133,14 +95,13 @@ index ddc9bcb..03d9e26 100644
 +
 +
 +def test_git_changes_empty(mocker):
-+    mocker.patch('pytest_fastest.git_output', return_value="""\
++    mocker.patch('pytest_fastest.git_output', return_value="""
 +""")
 +
 +    assert pytest_fastest.git_changes('foo') == (set(), set())
-\ No newline at end of file
 ''')
 
-    assert pytest_fastest.git_changes('foo') == (
+    assert git.changes_since('foo') == (
         {'here/tests/test_fastest.py', 'here/pytest_fastest.py'},
         {
             ('here/tests/test_fastest.py', 'test_fastest_commit_setting'),

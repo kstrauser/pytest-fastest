@@ -6,13 +6,14 @@ import contextlib
 import enum
 import json
 import pathlib
-import subprocess
 import sys
 from typing import Dict, List, Set, Tuple  # noqa: F401, pylint: disable=unused-import
 
 import pytest
 from _pytest.config import ArgumentError
 from _pytest.runner import runtestprotocol
+
+from . import git
 
 STOREFILE = '.fastest.coverage'
 COVERAGE = {}  # type: Dict[str, List[str]]
@@ -63,56 +64,6 @@ def pytest_addoption(parser):
 
 
 # Helpers
-
-
-def git_output(args: List[str]) -> str:
-    """Run a git command and return its output as a string."""
-
-    return subprocess.check_output(['git', *args]).decode('UTF-8')
-
-
-def git_toplevel() -> str:
-    """Get the toplevel git directory."""
-
-    return git_output(['rev-parse', '--show-toplevel']).strip()
-
-
-def git_changes(commit: str) -> Tuple[Set[str], Set[Tuple[str, str]]]:
-    """Get the set of changes between the given commit."""
-
-    root_dir = pathlib.Path(git_toplevel())
-    diff = git_output(['diff', commit])
-
-    changed_files = set()
-    changed_tests = set()
-    current_file = ''
-
-    for line in diff.splitlines():
-        try:
-            test_index = line.index('def test_')
-        except ValueError:
-            pass
-        else:
-            test_name = line[test_index + 4:].partition('(')[0]
-            changed_tests.add((current_file, test_name))
-
-        if not (line.startswith('--- ') or line.startswith('+++ ')):
-            continue
-        if not line.endswith('.py'):
-            continue
-        fname = line[4:]
-        if fname == '/dev/null':
-            continue
-        if not (fname.startswith('a/') or fname.startswith('b/')):
-            raise ValueError(
-                'Pretty sure {!r} should start with a/ or b/'.format(fname)
-            )
-
-        current_file = str(root_dir / fname[2:])
-        changed_files.add(current_file)
-
-    return changed_files, changed_tests
-
 
 @contextlib.contextmanager
 def tracer(rootdir: str, own_file: str):
@@ -206,10 +157,10 @@ def pytest_collection_modifyitems(config, items):
     """Mark unaffected tests as skippable."""
 
     if not config.cache.fastest_skip:
-        return
+        return None
 
     covered_test_files = {covdata['fspath'] for covdata in COVERAGE.values()}
-    changed_files, changed_tests = git_changes(config.cache.fastest_commit)
+    changed_files, changed_tests = git.changes_since(config.cache.fastest_commit)
 
     affected_nodes = set()
     for nodeid, covdata in COVERAGE.items():
@@ -236,7 +187,7 @@ def pytest_runtest_protocol(item, nextitem):
     """Gather coverage data for the item."""
 
     if not item.config.cache.fastest_gather:
-        return
+        return None
 
     with tracer(item.config.rootdir, str(item.fspath)) as coverage:
         reports = runtestprotocol(item, nextitem=nextitem)
