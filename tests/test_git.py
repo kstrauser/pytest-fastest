@@ -101,12 +101,14 @@ index ddc9bcb..03d9e26 100644
 +    assert pytest_fastest.git_changes('foo') == (set(), set())
 ''')
 
+    testfile = str(pathlib.Path('here/tests/test_fastest.py'))
+    codefile = str(pathlib.Path('here/pytest_fastest.py'))
     assert git.changes_since('foo') == (
-        {'here/tests/test_fastest.py', 'here/pytest_fastest.py'},
+        {testfile, codefile},
         {
-            ('here/tests/test_fastest.py', 'test_fastest_commit_setting'),
-            ('here/tests/test_fastest.py', 'test_git_changes_empty'),
-            ('here/tests/test_fastest.py', 'test_git_toplevel'),
-            ('here/tests/test_fastest.py', 'test_help_message'),
+            (testfile, 'test_fastest_commit_setting'),
+            (testfile, 'test_git_changes_empty'),
+            (testfile, 'test_git_toplevel'),
+            (testfile, 'test_help_message'),
         }
     )
