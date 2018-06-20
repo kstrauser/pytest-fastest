@@ -67,7 +67,7 @@ To use it:
 
 * In ``pytest.ini``, set ``fastest_commit`` to the name of a Git commit to
   compare your current work against. (You can also set or override it on the
-  comment line with ``--fastest-commit``). This is required if you want to
+  command line with ``--fastest-commit``). This is required if you want to
   skip tests, which is the main reason for using this plugin.
 
 * Use the command line argument ``--fastest-mode`` to choice the appropriate
