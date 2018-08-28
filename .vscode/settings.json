@@ -1,0 +1,30 @@
+{
+    "python.linting.flake8Enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.mypyEnabled": true,
+    "python.linting.flake8Args": [
+        "--max-line-length=99",
+        "--ignore=E203"
+    ],
+    "files.exclude": {
+        "**/_build/": true,
+        "**/__pycache__": true,
+        "*.egg-info": true,
+        ".mypy_cache": true,
+        ".pytest_cache": true,
+        ".tox": true,
+        ".vscode": true,
+        "build": true,
+        "dist": true,
+    },
+    "cSpell.enabledLanguageIds": [
+        "asciidoc",
+        "latex",
+        "less",
+        "markdown",
+        "plaintext",
+        "pub",
+        "restructuredtext",
+        "text",
+    ]
+}
