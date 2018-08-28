@@ -151,7 +151,7 @@ def pytest_configure(config):
         )
 
     COVERAGE.clear()
-    if config.cache.config.cache.fastest_gather or config.cache.fastest_skip:
+    if config.cache.fastest_gather or config.cache.fastest_skip:
         COVERAGE.update(load_coverage())
 
 
