@@ -96,6 +96,13 @@ Notes
 
 pytest-fastest stores its cached coverage data in a file named ``.fastest.coverage`` in the pytest rootdir.
 
+History
+=======
+
+v0.0.8, 2018-08-27: Updated import paths for new versions of pytest.
+
+v0.0.7: First generally usable release.
+
 .. _`pip`: https://pypi.org/project/pip/
 .. _`pytest.ini`: https://docs.pytest.org/en/latest/customize.html
 .. _`PyPI`: https://pypi.org/project/pytest-fastest/
