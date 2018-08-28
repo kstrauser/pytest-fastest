@@ -10,7 +10,10 @@ import sys
 from typing import Dict, List, Set, Tuple  # noqa: F401, pylint: disable=unused-import
 
 import pytest
-from _pytest.config import ArgumentError
+try:
+    from _pytest.config import ArgumentError
+except ImportError:
+    from _pytest.config.argparsing import ArgumentError
 from _pytest.runner import runtestprotocol
 
 from . import git
