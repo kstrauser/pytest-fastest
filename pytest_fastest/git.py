@@ -21,7 +21,7 @@ def changes_since(commit: str) -> Tuple[Set[str], Set[Tuple[str, str]]]:
     """Get the set of changes between the given commit."""
 
     toplevel = find_toplevel()
-    diff = cmd_output(["diff", commit])
+    diff = cmd_output(["diff", commit, "--"])
 
     changed_files = set()
     changed_tests = set()
