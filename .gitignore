@@ -18,6 +18,7 @@ eggs/
 lib/
 lib64/
 parts/
+pip-wheel-metadata/
 sdist/
 var/
 *.egg-info/
@@ -72,6 +73,7 @@ target/
 
 # pyenv
 .python-version
+.venv
 
 # pytest-fastest
 .fastest.coverage
