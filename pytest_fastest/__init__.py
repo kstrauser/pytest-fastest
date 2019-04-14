@@ -213,7 +213,7 @@ def pytest_runtest_protocol(item, nextitem):
     return True
 
 
-def pytest_terminal_summary(terminalreporter, exitstatus):  # pylint: disable=unused-argument
+def pytest_terminal_summary():
     """Save the coverage data we've collected."""
 
     if COVERAGE:
