@@ -94,11 +94,11 @@ def tracer(rootdir: str, own_file: str):
 
         result.add(func_filename)
 
-    sys.settrace(trace_calls)
+    oldtrace = sys.settrace(trace_calls)
     try:
         yield result
     finally:
-        sys.settrace(None)  # type: ignore
+        sys.settrace(oldtrace)  # type: ignore
 
 
 def load_coverage():
