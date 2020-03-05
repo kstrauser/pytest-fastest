@@ -5,7 +5,7 @@ packages = ["pytest_fastest"]
 
 package_data = {"": ["*"]}
 
-install_requires = ["pytest>=4.4,<5.0"]
+install_requires = ["pytest>=4.4"]
 
 entry_points = {"pytest11": ["fastest = pytest_fastest"]}
 

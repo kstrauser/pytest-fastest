@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pytest-fastest"
-version = "0.0.9"
+version = "0.0.10"
 description = "Use SCM and coverage to run only needed tests"
 authors = ["Kirk Strauser <kirk@amino.com>"]
 license = "MIT"
@@ -17,12 +17,12 @@ classifiers=[
 ]
 
 [tool.poetry.dependencies]
-python = "^3.5"
-pytest = "^4.4"
+python = ">=3.5"
+pytest = ">=4.4"
 
 [tool.poetry.dev-dependencies]
-pytest-mock = "^1.10"
-sphinx = "^2.0"
+pytest-mock = ">=1.10"
+sphinx = "^2"
 
 [tool.poetry.plugins."pytest11"]
 fastest = "pytest_fastest"
