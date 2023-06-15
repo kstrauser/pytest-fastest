@@ -94,7 +94,8 @@ def tracer(rootdir: str, own_file: str):
 
         result.add(func_filename)
 
-    oldtrace = sys.settrace(trace_calls)
+    oldtrace = sys.gettrace()
+    sys.settrace(trace_calls)
     try:
         yield result
     finally:

@@ -99,6 +99,8 @@ pytest-fastest stores its cached coverage data in a file named ``.fastest.covera
 History
 =======
 
+v0.0.11, 2023-06-15: Dependency version bumps. Correct restoration of sys.settrace after completion.
+
 v0.0.10, 2020-03-05: No code changes, just dependency version bumps.
 
 v0.0.9, 2019-04-05: Update the version of Requests. Switched to Poetry for packaging.

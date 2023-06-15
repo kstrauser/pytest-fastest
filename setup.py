@@ -11,7 +11,7 @@ entry_points = {"pytest11": ["fastest = pytest_fastest"]}
 
 setup_kwargs = {
     "name": "pytest-fastest",
-    "version": "0.0.10",
+    "version": "0.0.11",
     "description": "Use SCM and coverage to run only needed tests",
     "long_description": """\
 ==============
@@ -140,7 +140,7 @@ If you encounter any problems, please `file an issue`_ along with a detailed des
     "package_data": package_data,
     "install_requires": install_requires,
     "entry_points": entry_points,
-    "python_requires": ">=3.5,<4.0",
+    "python_requires": ">=3.7,<4.0",
 }
 
 
