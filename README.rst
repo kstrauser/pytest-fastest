@@ -35,7 +35,7 @@ Features
 Requirements
 ------------
 
-* Python 3.7+
+* Python 3.8+
 * pytest 3.4.0+
 
 
