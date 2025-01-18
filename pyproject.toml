@@ -20,15 +20,13 @@ classifiers=[
 python = ">=3.8"
 pytest = ">=4.4"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest-mock = "*"
 sphinx = "*"
+tox = "^4"
 
 [tool.poetry.plugins."pytest11"]
 fastest = "pytest_fastest"
-
-[tool.poetry.group.dev.dependencies]
-tox = "^4"
 
 [build-system]
 requires = ["poetry>=0.12"]
